@@ -8,3 +8,4 @@ streamlit
 chromadb
 openai
 google-genai
+altair==4.2.2
