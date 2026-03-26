@@ -133,7 +133,8 @@ def _embed_openai(texts: List[str], api_key: str) -> List[List[float]]:
 
 
 def _embed_gemini(texts: List[str], api_key: str) -> List[List[float]]:
-    import google.generativeai as genai
+    #import google.generativeai as genai
+    from google import genai
     genai.configure(api_key=api_key)
     embeddings = []
     for text in texts:
