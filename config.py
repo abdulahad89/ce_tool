@@ -2,7 +2,8 @@ import os
 
 # ✅ Llama 3.3 70B via HF Router (Groq-powered, super fast!)
 HF_MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct:groq"  
-HF_TOKEN = os.environ.get("HF_TOKEN")  # REQUIRED for router
+#HF_TOKEN = os.environ.get("HF_TOKEN")  # REQUIRED for router
+HF_TOKEN: str | None = os.environ.get("HF_TOKEN") or os.environ.get("HF_API_TOKEN")
 
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
