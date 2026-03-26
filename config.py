@@ -1,18 +1,13 @@
 import os
 
-# Hugging Face model + token
-HF_MODEL_ID: str = os.environ.get("HF_MODEL_ID", "mistralai/Mistral-Nemo-Instruct-2407")
-HF_TOKEN: str | None = os.environ.get("HF_TOKEN") or os.environ.get("HF_API_TOKEN")
+# ✅ Llama 3.3 70B via HF Router (Groq-powered, super fast!)
+HF_MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct:groq"  
+HF_TOKEN = os.environ.get("HF_TOKEN")  # REQUIRED for router
 
-# Embedding model for retrieval
-EMBEDDING_MODEL_NAME: str = os.environ.get(
-    "EMBEDDING_MODEL_NAME",
-    "sentence-transformers/all-MiniLM-L6-v2",
-)
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
-# Data paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_CONVERSIONS_PATH = os.path.join(BASE_DIR, "data", "sample_conversions.csv")
 DATA_ENGAGEMENT_PATH = os.path.join(BASE_DIR, "data", "sample_engagement.csv")
 
-TOP_K_DEFAULT = int(os.environ.get("TOP_K_DEFAULT", 4))
+TOP_K_DEFAULT = 4
