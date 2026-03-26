@@ -17,17 +17,7 @@ st.set_page_config(
 st.title("📊 DeepSeek-R1 RAG Demo - Campaign Analytics (Modular)")
 st.markdown(
     """
-This is a lightweight modular RAG (Retrieval-Augmented Generation) demo using:
-
-- **DeepSeek-R1** via Hugging Face Inference as the reasoning LLM
-- **all-MiniLM-L6-v2** sentence embeddings for semantic search
-- 100-row synthetic tables for **conversions** and **channel engagement**
-
-Everything is split into small modules so you can reuse pieces easily:
-- `config.py` – configuration & paths
-- `data_store.py` – loading data + vector retrieval
-- `llm_client.py` – Hugging Face DeepSeek-R1 client
-- `app.py` – Streamlit UI
+Lightweight modular RAG
 """
 )
 
