@@ -138,7 +138,7 @@ def _embed_gemini(texts: List[str], api_key: str) -> List[List[float]]:
     embeddings = []
     for text in texts:
         result = genai.embed_content(
-            model="models/text-embedding-004",
+            model="models/embedding-001",
             content=text,
             task_type="retrieval_document",
         )
