@@ -1,7 +1,9 @@
 """
 RAG Engine for Campaign Analytics Agent.
-Supports OpenAI and Google Gemini for embeddings + generation.
-Uses ChromaDB as the in-memory vector store.
+Uses:
+- Local embeddings (Sentence Transformers) → FREE + stable
+- OpenAI OR Gemini for generation
+- ChromaDB as vector store
 """
 
 import csv
@@ -80,23 +82,20 @@ def _build_campaign_summaries(conv_rows: List[dict], eng_rows: List[dict]) -> Li
     for cid in all_ids:
         crows = camp_conv.get(cid, [])
         erows = camp_eng.get(cid, [])
+
         name = crows[0]["campaign_name"] if crows else erows[0]["campaign_name"]
 
         total_conv = sum(int(r["conversions"]) for r in crows)
-        total_imp_c = sum(int(r["impressions"]) for r in crows)
-        total_clicks_c = sum(int(r["clicks"]) for r in crows)
-        avg_cpc = (sum(float(r["cost_per_conversion"]) for r in crows) / len(crows)) if crows else 0
+        total_imp = sum(int(r["impressions"]) for r in crows)
+        total_clicks = sum(int(r["clicks"]) for r in crows)
 
         total_spend = sum(float(r["spend"]) for r in erows)
         avg_ctr = (sum(float(r["ctr"]) for r in erows) / len(erows)) if erows else 0
-        avg_eng = (sum(float(r["engagement_score"]) for r in erows) / len(erows)) if erows else 0
 
         text = (
             f"SUMMARY — Campaign '{name}' (ID: {cid}): "
-            f"Total Conversions: {total_conv} across {total_imp_c:,} impressions "
-            f"({total_clicks_c:,} clicks). Avg Cost Per Conversion: ${avg_cpc:.2f}. "
-            f"Total Spend: ${total_spend:,.2f}. Avg CTR: {avg_ctr:.2%}. "
-            f"Avg Engagement Score: {avg_eng:.3f}."
+            f"Conversions: {total_conv}, Impressions: {total_imp}, Clicks: {total_clicks}. "
+            f"Spend: ${total_spend:.2f}, Avg CTR: {avg_ctr:.2%}."
         )
 
         meta = {
@@ -111,42 +110,26 @@ def _build_campaign_summaries(conv_rows: List[dict], eng_rows: List[dict]) -> Li
 
 
 # ─────────────────────────────────────────────────────────────
-# Embedding helpers
+# 🆓 LOCAL EMBEDDINGS (MAIN FIX)
 # ─────────────────────────────────────────────────────────────
 
-def _embed_openai(texts: List[str], api_key: str) -> List[List[float]]:
-    from openai import OpenAI
-    client = OpenAI(api_key=api_key)
+def _embed_local(texts: List[str]) -> List[List[float]]:
+    from sentence_transformers import SentenceTransformer
 
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=texts,
-    )
+    if not hasattr(_embed_local, "model"):
+        _embed_local.model = SentenceTransformer("all-MiniLM-L6-v2")
 
-    return [item.embedding for item in response.data]
-
-
-def _embed_gemini(texts: List[str], api_key: str) -> List[List[float]]:
-    from google import genai
-
-    client = genai.Client(api_key=api_key)
-
-    response = client.models.embed_content(
-        model="embedding-001",
-        contents=texts
-    )
-
-    return [e.values for e in response.embeddings]
+    return _embed_local.model.encode(texts).tolist()
 
 
 # ─────────────────────────────────────────────────────────────
-# Main RAG Engine
+# RAG Engine
 # ─────────────────────────────────────────────────────────────
 
 class RAGEngine:
     def __init__(self, api_key: str, provider: str, model: str, top_k: int = 5):
         self.api_key = api_key
-        self.provider = provider  # "OpenAI" or "Gemini"
+        self.provider = provider
         self.model = model
         self.top_k = top_k
 
@@ -172,31 +155,17 @@ class RAGEngine:
         metadatas = [d[1] for d in docs]
         ids = [str(uuid.uuid4()) for _ in docs]
 
-        batch_size = 50
-        all_embeddings = []
-
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i:i+batch_size]
-
-            if self.provider == "OpenAI":
-                emb = _embed_openai(batch, self.api_key)
-            else:
-                emb = _embed_gemini(batch, self.api_key)
-
-            all_embeddings.extend(emb)
+        embeddings = _embed_local(texts)
 
         self.collection.add(
             documents=texts,
-            embeddings=all_embeddings,
+            embeddings=embeddings,
             metadatas=metadatas,
             ids=ids,
         )
 
     def retrieve(self, query: str) -> List[str]:
-        if self.provider == "OpenAI":
-            q_emb = _embed_openai([query], self.api_key)[0]
-        else:
-            q_emb = _embed_gemini([query], self.api_key)[0]
+        q_emb = _embed_local([query])[0]
 
         results = self.collection.query(
             query_embeddings=[q_emb],
@@ -206,11 +175,11 @@ class RAGEngine:
         return results["documents"][0]
 
     def generate(self, query: str, context_docs: List[str]) -> str:
-        context = "\n\n".join(f"[Doc {i+1}]: {doc}" for i, doc in enumerate(context_docs))
+        context = "\n\n".join(context_docs)
 
-        system_prompt = """You are an expert Campaign Analytics AI agent..."""
+        system_prompt = "You are a campaign analytics expert."
 
-        user_message = f"""
+        user_prompt = f"""
 Context:
 {context}
 
@@ -218,11 +187,11 @@ Question: {query}
 """
 
         if self.provider == "OpenAI":
-            return self._generate_openai(system_prompt, user_message)
+            return self._generate_openai(system_prompt, user_prompt)
         else:
-            return self._generate_gemini(system_prompt, user_message)
+            return self._generate_gemini(system_prompt, user_prompt)
 
-    def _generate_openai(self, system_prompt: str, user_message: str) -> str:
+    def _generate_openai(self, system_prompt: str, user_prompt: str) -> str:
         from openai import OpenAI
         client = OpenAI(api_key=self.api_key)
 
@@ -230,31 +199,26 @@ Question: {query}
             model=self.model,
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
+                {"role": "user", "content": user_prompt},
             ],
             temperature=0.2,
-            max_tokens=1500,
         )
 
         return response.choices[0].message.content
 
-    def _generate_gemini(self, system_prompt: str, user_message: str) -> str:
+    def _generate_gemini(self, system_prompt: str, user_prompt: str) -> str:
         from google import genai
 
         client = genai.Client(api_key=self.api_key)
 
         response = client.models.generate_content(
             model=self.model,
-            contents=f"{system_prompt}\n\n{user_message}",
-            config={
-                "temperature": 0.2,
-                "max_output_tokens": 1500,
-            }
+            contents=f"{system_prompt}\n\n{user_prompt}",
         )
 
         return response.text
 
-    def query(self, user_question: str) -> Tuple[str, List[str]]:
-        docs = self.retrieve(user_question)
-        answer = self.generate(user_question, docs)
+    def query(self, question: str):
+        docs = self.retrieve(question)
+        answer = self.generate(question, docs)
         return answer, docs
