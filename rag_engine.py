@@ -132,19 +132,32 @@ def _embed_openai(texts: List[str], api_key: str) -> List[List[float]]:
     return [item.embedding for item in response.data]
 
 
+# def _embed_gemini(texts: List[str], api_key: str) -> List[List[float]]:
+#     #import google.generativeai as genai
+#     from google import genai
+#     genai.configure(api_key=api_key)
+#     embeddings = []
+#     for text in texts:
+#         result = genai.embed_content(
+#             model="models/embedding-001",
+#             content=text,
+#             task_type="retrieval_document",
+#         )
+#         embeddings.append(result["embedding"])
+#     return embeddings
+
+from typing import List
 def _embed_gemini(texts: List[str], api_key: str) -> List[List[float]]:
-    #import google.generativeai as genai
     from google import genai
-    genai.configure(api_key=api_key)
-    embeddings = []
-    for text in texts:
-        result = genai.embed_content(
-            model="models/embedding-001",
-            content=text,
-            task_type="retrieval_document",
-        )
-        embeddings.append(result["embedding"])
-    return embeddings
+
+    client = genai.Client(api_key=api_key)
+
+    response = client.models.embed_content(
+        model="embedding-001",   # ✅ correct model name
+        contents=texts           # ✅ batch input
+    )
+
+    return [e.values for e in response.embeddings]
 
 
 # ─────────────────────────────────────────────────────────────
