@@ -1,7 +1,7 @@
 import os
 
 # Hugging Face model + token
-HF_MODEL_ID: str = os.environ.get("HF_MODEL_ID", "deepseek-ai/DeepSeek-R1")
+HF_MODEL_ID: str = os.environ.get("HF_MODEL_ID", "mistralai/Mistral-Nemo-Instruct-2407")
 HF_TOKEN: str | None = os.environ.get("HF_TOKEN") or os.environ.get("HF_API_TOKEN")
 
 # Embedding model for retrieval
