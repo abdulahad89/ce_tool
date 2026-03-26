@@ -4,7 +4,8 @@ import streamlit as st
 
 from config import HF_MODEL_ID, HF_TOKEN, TOP_K_DEFAULT
 from data_store import load_tables, retrieve
-from llm_client import call_deepseek_r1
+#from llm_client import call_deepseek_r1
+from llm_client import call_llama_via_router
 
 
 st.set_page_config(
@@ -76,7 +77,9 @@ if user_query:
     with st.chat_message("assistant"):
         with st.spinner("Retrieving context and asking DeepSeek-R1..."):
             context, idxs = retrieve(user_query, top_k=top_k)
-            answer = call_deepseek_r1(user_query, context)
+            #answer = call_deepseek_r1(user_query, context)
+            answer = call_llama_via_router(user_query, context)
+
 
             st.markdown(answer)
 
