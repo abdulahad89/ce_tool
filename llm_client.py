@@ -37,7 +37,7 @@ def get_client(provider: str) -> OpenAI | genai.GenerativeModel | InferenceClien
         if not GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY required")
         genai.configure(api_key=GEMINI_API_KEY)
-        return genai.GenerativeModel('gemini-1.5-pro')  # or 'gemini-1.5-flash'
+        return genai.GenerativeModel('gemini-2.5-flash-lite')  # or 'gemini-1.5-flash'
     elif provider == "hf_direct":
         if HF_TOKEN:
             return InferenceClient(api_key=HF_TOKEN)
