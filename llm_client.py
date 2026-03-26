@@ -1,19 +1,24 @@
 from __future__ import annotations
 
-from huggingface_hub import InferenceClient
+import os
+from openai import OpenAI
 
 from config import HF_MODEL_ID, HF_TOKEN
 
 
-def get_hf_client() -> InferenceClient:
-    """Create a Hugging Face InferenceClient, with token if provided."""
-    if HF_TOKEN:
-        return InferenceClient(api_key=HF_TOKEN)
-    return InferenceClient()
+def get_hf_client() -> OpenAI:
+    """Create OpenAI-compatible client for HF Router."""
+    if not HF_TOKEN:
+        raise ValueError("HF_TOKEN is required for HF Router API")
+    
+    return OpenAI(
+        base_url="https://router.huggingface.co/v1",
+        api_key=HF_TOKEN,
+    )
 
 
-def call_deepseek_r1(query: str, context: str, max_tokens: int = 512) -> str:
-    """Call DeepSeek-R1 (or compatible) via chat.completions API."""
+def call_llama_via_router(query: str, context: str, max_tokens: int = 512) -> str:
+    """Call Llama 3.3-70B (or other) via HF Router + OpenAI client."""
     client = get_hf_client()
 
     system_prompt = (
@@ -31,7 +36,7 @@ def call_deepseek_r1(query: str, context: str, max_tokens: int = 512) -> str:
 
     try:
         completion = client.chat.completions.create(
-            model=HF_MODEL_ID,
+            model=HF_MODEL_ID,  # e.g., "meta-llama/Llama-3.3-70B-Instruct:groq"
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
@@ -41,9 +46,7 @@ def call_deepseek_r1(query: str, context: str, max_tokens: int = 512) -> str:
         )
 
         message = completion.choices[0].message
-        if isinstance(message, dict):
-            return message.get("content", "(No content returned)")
-        return str(message)
+        return message.content or "(No content returned)"
 
     except Exception as e:
-        return f"DeepSeek-R1 call failed: {e}"
+        return f"LLM call failed: {e}"
